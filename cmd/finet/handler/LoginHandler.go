@@ -11,7 +11,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/ethanjameslong1/FiNet/database"
+	"github.com/AndrewBrickweg/Finet_v2/database"
 	"github.com/google/uuid"
 )
 

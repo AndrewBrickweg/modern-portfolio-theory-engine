@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"text/template"
 
-	"github.com/ethanjameslong1/FiNet/database"
+	"github.com/AndrewBrickweg/Finet_v2/database"
 )
 
 func (h *Handler) RootHandler(w http.ResponseWriter, r *http.Request) {

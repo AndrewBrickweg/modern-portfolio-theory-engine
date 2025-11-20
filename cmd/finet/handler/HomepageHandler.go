@@ -1,10 +1,11 @@
 package handler
 
 import (
-	"github.com/ethanjameslong1/FiNet/database"
 	"log"
 	"net/http"
 	"text/template"
+
+	"github.com/AndrewBrickweg/Finet_v2/database"
 )
 
 func (h *Handler) HomepageHandler(w http.ResponseWriter, r *http.Request) {

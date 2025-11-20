@@ -1,11 +1,11 @@
-module github.com/ethanjameslong1/FiNet/cmd/stock
+module github.com/AndrewBrickweg/Finet_v2/cmd/stock
 
 go 1.24.0
 
 toolchain go1.24.7
 
 require (
-	github.com/ethanjameslong1/FiNet/database v0.0.0-20250930190400-a106d3ee87fa
+	github.com/AndrewBrickweg/Finet_v2/database v0.0.0-20250930190400-a106d3ee87fa
 	github.com/gin-gonic/gin v1.11.0
 	gonum.org/v1/gonum v0.16.0
 )
@@ -46,3 +46,5 @@ require (
 	golang.org/x/tools v0.36.0 // indirect
 	google.golang.org/protobuf v1.36.9 // indirect
 )
+
+replace github.com/AndrewBrickweg/Finet_v2/database => ../../database

@@ -2,12 +2,13 @@ package handler
 
 import (
 	"errors"
-	"github.com/ethanjameslong1/FiNet/cmd/stock/analysis"
-	"github.com/ethanjameslong1/FiNet/database"
-	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/AndrewBrickweg/Finet_v2/cmd/stock/analysis"
+	"github.com/AndrewBrickweg/Finet_v2/database"
+	"github.com/gin-gonic/gin"
 )
 
 const (

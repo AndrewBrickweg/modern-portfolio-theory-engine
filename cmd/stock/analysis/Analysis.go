@@ -3,11 +3,12 @@ package analysis
 import (
 	"errors"
 	"fmt"
-	"gonum.org/v1/gonum/stat"
 	"log"
 	"strconv"
 	"sync"
 	"time"
+
+	"gonum.org/v1/gonum/stat"
 )
 
 // Test Values

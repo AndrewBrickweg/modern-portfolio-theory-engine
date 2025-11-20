@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
-	"github.com/ethanjameslong1/FiNet/cmd/stock/handler"
-	"github.com/ethanjameslong1/FiNet/database"
-	"github.com/gin-gonic/gin"
 	"log"
 	"time"
+
+	"github.com/AndrewBrickweg/Finet_v2/cmd/stock/handler"
+	"github.com/AndrewBrickweg/Finet_v2/database"
+	"github.com/gin-gonic/gin"
 )
 
 const (

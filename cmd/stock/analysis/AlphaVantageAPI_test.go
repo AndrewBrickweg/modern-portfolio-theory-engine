@@ -3,9 +3,10 @@ package analysis_test
 import (
 	"context"
 	"encoding/json"
-	"github.com/ethanjameslong1/FiNet/cmd/stock/analysis"
 	"testing"
 	"time"
+
+	"github.com/AndrewBrickweg/Finet_v2/cmd/stock/analysis"
 )
 
 func TestMakeWeeklyDataSlice(t *testing.T) {

@@ -3,12 +3,13 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/ethanjameslong1/FiNet/cmd/stock/analysis"
-	"github.com/ethanjameslong1/FiNet/database"
 	"log"
 	"net/http"
 	"text/template"
 	"time"
+
+	"github.com/AndrewBrickweg/Finet_v2/cmd/stock/analysis"
+	"github.com/AndrewBrickweg/Finet_v2/database"
 )
 
 type PageData struct {

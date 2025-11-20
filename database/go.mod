@@ -1,4 +1,4 @@
-module github.com/ethanjameslong1/FiNet/database
+module github.com/AndrewBrickweg/Finet_v2/database
 
 go 1.24.0
 
