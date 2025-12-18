@@ -15,12 +15,14 @@ services:
   stock_data_db:
     image: mysql:8.0
     container_name: stock_data_db
+    ports:
+      - "3307:3306"
     environment:
       MYSQL_DATABASE: stock_data_db
       MYSQL_ROOT_PASSWORD: Front2Back!
 
     volumes:
-      - ./stock_data/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./stock_data_db/init.sql:/docker-entrypoint-initdb.d/init.sql
       - stock_data:/var/lib/mysql
     networks:
       - app_network

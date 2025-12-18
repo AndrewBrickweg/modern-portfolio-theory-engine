@@ -8,8 +8,11 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
 	// "text/template"
 	"time"
+
+	"github.com/AndrewBrickweg/Finet_v2/cmd/finet/analysis"
 	"github.com/AndrewBrickweg/Finet_v2/database"
 	"github.com/google/uuid"
 )
@@ -25,8 +28,9 @@ type UserLoginData struct {
 
 type Handler struct {
 	UserSessionDBService *database.DBService
-	StockDBService       *database.StockDB
 	SessionDuration      time.Duration
+    StockDB              *database.StockDB
+	RequiredMonths       int
 }
 
 // TEST FUNCTIONS *****************************************************************************
@@ -102,8 +106,9 @@ func NewHandler(UserSessionDB *database.DBService,  StockDBService *database.Sto
 
 	return &Handler{
 		UserSessionDBService: UserSessionDB,
-		StockDBService:       StockDBService,
+		StockDB:       StockDBService,
 		SessionDuration:      sessionDuration,
+        RequiredMonths: analysis.DefaultRequiredMonths,
 	}, nil
 }
 

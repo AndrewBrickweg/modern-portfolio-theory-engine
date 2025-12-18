@@ -1,8 +1,20 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import PortfolioChart from "./PortfolioChart";
 import CPICalculator from "../simulator/CPICalculator";
+
+type BestPortfolio = {
+  Weights: Record<string, number>;
+  Return: number;
+  Risk: number;
+  Sharpe: number;
+};
+
+type PortfolioResponse = {
+  BestPortfolio: BestPortfolio;
+  Returns: Record<string, number[]>;
+};
 
 const Portfolio = () => {
   const [tickers, setTickers] = useState<string[]>([]);
@@ -10,6 +22,7 @@ const Portfolio = () => {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState<string>("");
   const [searchResults, setSearchResults] = useState<[]>([]);
+  const [portfolio, setPortfolio] = useState<PortfolioResponse | null>(null);
   const [cpiData, setCpiData] = useState({
     initialInvestment: 0,
     monthlyContribution: 0,
@@ -17,6 +30,16 @@ const Portfolio = () => {
     expectedReturn: 0,
     variance: 0,
   });
+
+  //set cpi data from state
+  useEffect(() => {
+    if (!portfolio?.BestPortfolio?.Return) return;
+
+    setCpiData((prev) => ({
+      ...prev,
+      expectedReturn: Number((portfolio.BestPortfolio.Return * 12).toFixed(2)),
+    }));
+  }, [portfolio]);
 
   const getPortfolioData = async () => {
     try {
@@ -31,6 +54,7 @@ const Portfolio = () => {
       }
 
       const data = await res.json();
+      setPortfolio(data);
       console.log("Portfolio data fetched:", data);
     } catch {
       console.error("Error fetching portfolio data");
@@ -172,6 +196,42 @@ const Portfolio = () => {
           </ul>
         )}
       </section>
+
+      <div>
+        {portfolio && (
+          <section className="container mx-auto p-6 bg-white dark:bg-gray-800 rounded-xl shadow mb-10">
+            <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">
+              Optimal Portfolio Allocation
+            </h3>
+
+            <div className="space-y-2 text-gray-800 dark:text-gray-200">
+              <p>
+                <strong>Historical Annual Return:</strong>{" "}
+                {(portfolio.BestPortfolio.Return * 12).toFixed(2)}%
+              </p>
+              <p>
+                <strong>Risk (Volatility):</strong>{" "}
+                {(portfolio.BestPortfolio.Risk * Math.sqrt(12)).toFixed(2)}%
+              </p>
+              <p>
+                <strong>Sharpe Ratio:</strong>{" "}
+                {portfolio.BestPortfolio.Sharpe.toFixed(2)}
+              </p>
+
+              <h4 className="font-semibold mt-4">Weights:</h4>
+              <ul className="list-disc pl-5">
+                {Object.entries(portfolio.BestPortfolio.Weights).map(
+                  ([ticker, weight]) => (
+                    <li key={ticker}>
+                      {ticker}: {(weight * 100).toFixed(1)}%
+                    </li>
+                  )
+                )}
+              </ul>
+            </div>
+          </section>
+        )}
+      </div>
 
       <CPICalculator onChange={setCpiData} defaults={cpiData} />
 

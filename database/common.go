@@ -1,10 +1,14 @@
 package database
 
 import (
+	"bufio"
 	"context"
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
+	"strings"
+	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql" // MySQL driver
@@ -42,11 +46,73 @@ type User struct {
 }
 
 const (
-	DriverName            string = "mysql"
-	UserSessionDataSource string = "root:Front2Back!@tcp(user_session_db:3306)/user_session_db?parseTime=true"
-	StockDataSource   string = "root:Front2Back!@tcp(stock_data_db:3306)/stock_data_db?parseTime=true"
-	CONNECTIONS           int    = 50
+	DriverName  string = "mysql"
+	CONNECTIONS int    = 50
 )
+
+var loadEnvOnce sync.Once
+
+func loadDotEnv() {
+	file, err := os.Open(".env")
+	if err != nil {
+		return // ignore if missing; rely on real env
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		val := strings.TrimSpace(parts[1])
+		if key == "" {
+			continue
+		}
+		if _, exists := os.LookupEnv(key); !exists {
+			os.Setenv(key, val)
+		}
+	}
+}
+
+func mustEnv(key, fallback string) string {
+	loadEnvOnce.Do(loadDotEnv)
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+func userSessionDSN() string {
+	host := mustEnv("DB_USER_SESSION_HOST", "user_session_db")
+	port := mustEnv("DB_USER_SESSION_PORT", "3306")
+	user := mustEnv("DB_USER_SESSION_USER", "root")
+	pass := mustEnv("DB_USER_SESSION_PASSWORD", "Front2Back!")
+	name := mustEnv("DB_USER_SESSION_NAME", "user_session_db")
+	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", user, pass, host, port, name)
+}
+
+func stockDataDSN() string {
+	host := mustEnv("DB_STOCK_DATA_HOST", "stock_data_db")
+	port := mustEnv("DB_STOCK_DATA_PORT", "3306")
+	user := mustEnv("DB_STOCK_DATA_USER", "root")
+	pass := mustEnv("DB_STOCK_DATA_PASSWORD", "Front2Back!")
+	name := mustEnv("DB_STOCK_DATA_NAME", "stock_data_db")
+	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", user, pass, host, port, name)
+}
+
+func UserSessionDataSource() string {
+	return userSessionDSN()
+}
+
+func StockDataSource() string {
+	return stockDataDSN()
+}
 
 func NewDBService(ctx context.Context, dataSourceName string) (*DBService, error) {
 	var db *sql.DB

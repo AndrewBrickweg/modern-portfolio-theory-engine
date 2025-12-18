@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
 	"github.com/AndrewBrickweg/Finet_v2/cmd/finet/analysis"
 )
 
@@ -40,7 +39,7 @@ func (h *Handler) PortfolioHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	monthlyData, err := analysis.MakeMonthlyDataSlice(ctx, req.Tickers)
+	monthlyData, err := analysis.MakeMonthlyDataSlice(ctx, req.Tickers, h.StockDB, h.RequiredMonths,)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error retrieving stock data: %v", err), http.StatusInternalServerError)
 		return

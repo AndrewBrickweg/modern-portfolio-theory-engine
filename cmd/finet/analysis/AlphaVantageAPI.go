@@ -1,9 +1,5 @@
 package analysis
 
-//imports... obvi
-//checking github correctness
-
-//Written by Ethan Long
 import (
 	"context"
 	"encoding/json"
@@ -12,12 +8,17 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strconv"
+
+	// "sync"
 	"time"
+
+	"github.com/AndrewBrickweg/Finet_v2/database"
 )
 
 // global constants
 const (
-	ApiKey                  = "QE75UD8K5T3GFRB5"
+	ApiKey                  = "ALPHAVANTAGE_API_KEY"
 	ApiURL                  = "https://www.alphavantage.co/query?function=%v&symbol=%v&apikey=%v"
 	WeeklyAdjustedFunction  = "TIME_SERIES_WEEKLY_ADJUSTED"
 	MonthlyAdjustedFunction = "TIME_SERIES_MONTHLY_ADJUSTED"
@@ -83,7 +84,7 @@ type StockWeights struct {
 type AlphaVantageParam struct {
 	Function     string
 	Symbol       string
-	Datatype     string //defaults to JSON, i don't think csv will ever come into play
+	Datatype     string 
 	APIKey       string
 	StartDate    string //for internal use, not a parameter
 	EndDate      string //for internal use, not a parameter
@@ -126,8 +127,6 @@ func RetrieveStockDataWeekly(ctx context.Context, params AlphaVantageParam) (*St
 	return &stockData, nil
 }
 
-
-
 func MakeWeeklyDataSlice(ctx context.Context, symbols []string) ([]*StockDataWeekly, error) {
 	paramTemplate := AlphaVantageParam{Function: WeeklyAdjustedFunction, APIKey: ApiKey}
 	dataSlice := make([]*StockDataWeekly, len(symbols))
@@ -148,8 +147,6 @@ func MakeWeeklyDataSlice(ctx context.Context, symbols []string) ([]*StockDataWee
 	return dataSlice, nil
 }
 
-
-//Written by Andrew Brickweg
 func RetrieveStockDataMonthly(ctx context.Context, params AlphaVantageParam) (*StockDataMonthly, error) {
 	if params.Function != MonthlyAdjustedFunction || params.Symbol == "" || params.APIKey == "" {
 		return nil, fmt.Errorf("Required params are missing or wrong")
@@ -182,9 +179,117 @@ func RetrieveStockDataMonthly(ctx context.Context, params AlphaVantageParam) (*S
 	return &stockData, nil
 }
 
-func MakeMonthlyDataSlice(ctx context.Context, symbols []string) ([]*StockDataMonthly, error) {
+//Using DB in prod, not making requests to API
+//need to query db and fit daily monthly close price to stockdatamonthly 
+const DefaultRequiredMonths = 60
+
+func MakeMonthlyDataSlice(ctx context.Context, symbols []string, stockDB *database.StockDB, requiredMonths int)([]*StockDataMonthly, error){
+
+	if requiredMonths < 2 {
+		return nil, fmt.Errorf("requiredMonths must be >= 2")
+	}
+
+	dataSlice := make([]*StockDataMonthly, 0, len(symbols))
+	
+	for _, symbol := range symbols {
+
+		dailyData, err := stockDB.QueryStockData(ctx, symbol)
+		if err != nil {
+			return nil, fmt.Errorf("query failed for %s: %w", symbol, err)
+		}
+
+		if len(dailyData) == 0 {
+			log.Printf("No data for symbol %s, skipping", symbol)
+			continue
+		}
+
+		monthly := make(map[string]database.StockData)
+		for _, d := range dailyData {
+			key := database.MonthKey(d.Date)
+
+			if prev, ok := monthly[key]; !ok || d.Date > prev.Date {
+				monthly[key] = d
+			}
+		}
+
+		md := &StockDataMonthly{}
+		md.MetaData.Symbol = symbol
+		md.TimeSeriesMonthly = make(map[string]struct {
+			Open      string `json:"1. open"`
+			High      string `json:"2. high"`
+			Low       string `json:"3. low"`
+			Close     string `json:"4. close"`
+			AdjClose  string `json:"5. adjusted close"`
+			Volume    string `json:"6. volume"`
+			DivAmount string `json:"7. dividend amount"`
+		})
+
+		for month, d := range monthly {
+			md.TimeSeriesMonthly[month] = struct {
+				Open      string `json:"1. open"`
+				High      string `json:"2. high"`
+				Low       string `json:"3. low"`
+				Close     string `json:"4. close"`
+				AdjClose  string `json:"5. adjusted close"`
+				Volume    string `json:"6. volume"`
+				DivAmount string `json:"7. dividend amount"`
+			}{
+				AdjClose: strconv.FormatFloat(d.AdjClose, 'f', -1, 64),
+			}
+		}
+
+		if err := truncateToMonths(md, requiredMonths); err != nil {
+			return nil, err
+		}
+
+		dataSlice = append(dataSlice, md)
+	}
+
+	if len(dataSlice) == 0 {
+			return nil, fmt.Errorf("no valid monthly data produced")
+		}
+
+	return dataSlice, nil
+}
+
+func truncateToMonths(md *StockDataMonthly, requiredMonths int) error {
+	if len(md.TimeSeriesMonthly) < requiredMonths {
+		return fmt.Errorf(
+			"symbol %s has %d months, requires %d",
+			md.MetaData.Symbol,
+			len(md.TimeSeriesMonthly),
+			requiredMonths,
+		)
+	}
+
+	//sort dates
+	dates := make([]string, 0, len(md.TimeSeriesMonthly))
+	for d := range md.TimeSeriesMonthly {
+		dates = append(dates, d)
+	}
+	sort.Strings(dates)
+
+	start := len(dates) - requiredMonths
+	newSeries := make(map[string]struct {
+		Open      string `json:"1. open"`
+		High      string `json:"2. high"`
+		Low       string `json:"3. low"`
+		Close     string `json:"4. close"`
+		AdjClose  string `json:"5. adjusted close"`
+		Volume    string `json:"6. volume"`
+		DivAmount string `json:"7. dividend amount"`
+	}, requiredMonths)
+
+	for _, d := range dates[start:] {
+		newSeries[d] = md.TimeSeriesMonthly[d]
+	}
+
+	md.TimeSeriesMonthly = newSeries
+	return nil
+}
+
+func MakeMonthlyDataSliceAPI(ctx context.Context, symbols []string) ([]*StockDataMonthly, error) {
 	const (
-		rateLimitDelay = 12 * time.Second // 5 calls per minute → 12s between calls
 		maxRetries     = 3
 		maxErrors      = 5
 	)
@@ -194,6 +299,9 @@ func MakeMonthlyDataSlice(ctx context.Context, symbols []string) ([]*StockDataMo
 	var allErrors []error
 
 	for _, s := range symbols {
+
+		//check db first
+		// existingTickers, dbErr = database.QueryStockData()
 		paramTemplate.Symbol = s
 
 		var stock *StockDataMonthly
@@ -206,10 +314,8 @@ func MakeMonthlyDataSlice(ctx context.Context, symbols []string) ([]*StockDataMo
 				continue
 			}
 
-			// Check for API limit Note or missing data
 			if stock.Note != "" {
 				log.Printf("AlphaVantage limit reached for %q: %s", s, stock.Note)
-				time.Sleep(rateLimitDelay) // wait and retry
 				err = fmt.Errorf("rate limited, retrying")
 				continue
 			}
@@ -217,13 +323,15 @@ func MakeMonthlyDataSlice(ctx context.Context, symbols []string) ([]*StockDataMo
 				err = fmt.Errorf("API error for %q: %s", s, stock.ErrorMessage)
 				break
 			}
-
+			
+			if(len(stock.TimeSeriesMonthly) < 2) {
+				err = fmt.Errorf("insufficient data points (%d)", len(stock.TimeSeriesMonthly))
+				continue
+			}
 			// Success
 			dataSlice = append(dataSlice, stock)
 			break
 		}
-
-		
 
 		if err != nil {
 			log.Printf("Failed to retrieve data for %q after %d attempts", s, maxRetries)
@@ -232,9 +340,6 @@ func MakeMonthlyDataSlice(ctx context.Context, symbols []string) ([]*StockDataMo
 				return dataSlice, fmt.Errorf("too many failed API calls: %v", allErrors)
 			}
 		}
-
-		// Respect free-tier rate limit
-		time.Sleep(rateLimitDelay)
 	}
 
 	for stock, r := range dataSlice {
@@ -248,7 +353,8 @@ func MakeMonthlyDataSlice(ctx context.Context, symbols []string) ([]*StockDataMo
 		if minLength == -1 || length < minLength {
 			minLength = length
 		}
-	}
+	}	
+
 	if minLength == -1 || minLength < 2 {
 		return dataSlice, fmt.Errorf("not enough valid data retrieved")
 	}
