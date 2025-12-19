@@ -105,3 +105,32 @@ func (s *StockDB) QueryStockData(ctx context.Context, ticker string) ([]StockDat
 func MonthKey(date string) string {
 	return date[:7]
 }
+
+func(s *StockDB) GetAllTickers(ctx context.Context)([]string, error){
+	rows, err := s.DBService.db.QueryContext(ctx, `
+		SELECT DISTINCT ticker
+		FROM stock_data
+		ORDER BY ticker ASC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	tickers := make([]string, 0)
+
+	for rows.Next() {
+		var ticker string
+		if err := rows.Scan(&ticker); err != nil {
+			return nil, err
+		}
+		tickers = append(tickers, ticker)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return tickers, nil
+
+}

@@ -60,8 +60,11 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/", appHandler.AuthMiddleware(http.HandlerFunc(appHandler.RootHandler)))
 	mux.HandleFunc("POST /login", appHandler.LoginHandler)
-	mux.Handle("POST /portfolio", http.HandlerFunc(appHandler.PortfolioHandler))
 	mux.HandleFunc("POST /register", appHandler.RegistrationHandler)
+	
+	mux.Handle("POST /portfolio", http.HandlerFunc(appHandler.PortfolioHandler))
+	mux.Handle("GET /tickers", http.HandlerFunc(appHandler.GetTickersHandler))
+
 	mux.HandleFunc("GET /logout", appHandler.LogoutHandler)
 
 	// mux.Handle("GET /homepage", appHandler.AuthMiddleware(http.HandlerFunc(appHandler.HomepageHandler)))

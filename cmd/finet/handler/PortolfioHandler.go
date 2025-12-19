@@ -66,3 +66,21 @@ func (h *Handler) PortfolioHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(optimizedPortfolio)
 }
 
+func (h * Handler) GetTickersHandler (w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	tickers, err := h.StockDB.GetAllTickers(ctx)
+	if err != nil {
+		http.Error(w, "Failed to fetch tickers", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type","application/json")
+	json.NewEncoder(w).Encode(tickers)
+}
