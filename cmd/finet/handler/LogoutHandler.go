@@ -8,7 +8,8 @@ import (
 func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("SessionCookie")
 	if err != nil {
-		http.Redirect(w, r, "/finet/login", http.StatusSeeOther)
+		// No cookie? Treat as already logged out.
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
@@ -20,12 +21,12 @@ func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "SessionCookie",
 		Value:    "", // Clear the value
-		Path:     "/finet/",
+		Path:     "/",
 		MaxAge:   -1, // Expire immediately
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   h.SecureCookie,
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	http.Redirect(w, r, "/finet/login", http.StatusSeeOther)
+	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }

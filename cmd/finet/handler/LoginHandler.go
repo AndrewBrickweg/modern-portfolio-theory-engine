@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	// "text/template"
@@ -29,8 +30,9 @@ type UserLoginData struct {
 type Handler struct {
 	UserSessionDBService *database.DBService
 	SessionDuration      time.Duration
-    StockDB              *database.StockDB
+	StockDB              *database.StockDB
 	RequiredMonths       int
+	SecureCookie         bool
 }
 
 // TEST FUNCTIONS *****************************************************************************
@@ -96,7 +98,7 @@ type Handler struct {
 
 // TEST FUNCTIONS *****************************************************************************
 
-func NewHandler(UserSessionDB *database.DBService,  StockDBService *database.StockDB, sessionDuration time.Duration) (*Handler, error) {
+func NewHandler(UserSessionDB *database.DBService, StockDBService *database.StockDB, sessionDuration time.Duration) (*Handler, error) {
 	if UserSessionDB == nil {
 		return nil, errors.New("database services cannot be nil")
 	}
@@ -106,10 +108,24 @@ func NewHandler(UserSessionDB *database.DBService,  StockDBService *database.Sto
 
 	return &Handler{
 		UserSessionDBService: UserSessionDB,
-		StockDB:       StockDBService,
+		StockDB:              StockDBService,
 		SessionDuration:      sessionDuration,
-        RequiredMonths: analysis.DefaultRequiredMonths,
+		RequiredMonths:       analysis.DefaultRequiredMonths,
+		SecureCookie:         detectSecureCookie(),
 	}, nil
+}
+
+func detectSecureCookie() bool {
+	// Explicit override wins
+	if v := strings.ToLower(os.Getenv("COOKIE_SECURE")); v == "true" {
+		return true
+	} else if v == "false" {
+		return false
+	}
+
+	// Fallback: assume prod needs secure cookies
+	env := strings.ToLower(os.Getenv("APP_ENV"))
+	return env == "prod" || env == "production"
 }
 
 // func (h *Handler) ShowLogin(w http.ResponseWriter, r *http.Request) {
@@ -178,16 +194,16 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
     }
 
     // Set cookie
-    cookie := http.Cookie{
-        Name:     "SessionCookie",
-        Value:    sessionID.String(),
-        Path:     "/finet/",
-        Expires:  time.Now().Add(h.SessionDuration),
-        HttpOnly: true,
-        Secure:   true,
-        SameSite: http.SameSiteLaxMode,
-    }
-    http.SetCookie(w, &cookie)
+	cookie := http.Cookie{
+		Name:     "SessionCookie",
+		Value:    sessionID.String(),
+		Path:     "/",
+		Expires:  time.Now().Add(h.SessionDuration),
+		HttpOnly: true,
+		Secure:   h.SecureCookie,
+		SameSite: http.SameSiteLaxMode,
+	}
+	http.SetCookie(w, &cookie)
 
     // Respond with JSON instead of redirect
     w.Header().Set("Content-Type", "application/json")

@@ -59,13 +59,14 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/", appHandler.AuthMiddleware(http.HandlerFunc(appHandler.RootHandler)))
-	mux.HandleFunc("POST /login", appHandler.LoginHandler)
-	mux.HandleFunc("POST /register", appHandler.RegistrationHandler)
-	
-	mux.Handle("POST /portfolio", http.HandlerFunc(appHandler.PortfolioHandler))
-	mux.Handle("GET /tickers", http.HandlerFunc(appHandler.GetTickersHandler))
 
-	mux.HandleFunc("GET /logout", appHandler.LogoutHandler)
+	mux.Handle("POST /login", http.HandlerFunc(appHandler.LoginHandler))
+	mux.Handle("POST /register", http.HandlerFunc(appHandler.RegistrationHandler))
+
+	mux.Handle("/portfolio", appHandler.AuthMiddleware(http.HandlerFunc(appHandler.PortfolioHandler)))
+	mux.Handle("/tickers", appHandler.AuthMiddleware(http.HandlerFunc(appHandler.GetTickersHandler)))
+
+	mux.Handle("GET /logout", appHandler.AuthMiddleware(http.HandlerFunc(appHandler.LogoutHandler)))
 
 	// mux.Handle("GET /homepage", appHandler.AuthMiddleware(http.HandlerFunc(appHandler.HomepageHandler)))
 	// mux.HandleFunc("GET /login", appHandler.ShowLogin)
@@ -75,10 +76,6 @@ func main() {
 	// mux.Handle("GET /predictions", appHandler.AuthMiddleware(http.HandlerFunc(appHandler.ShowPredictionsHandler)))
 	// mux.Handle("GET /rawdata", appHandler.AuthMiddleware(http.HandlerFunc(appHandler.RawDataRequest)))
 	// mux.Handle("POST /rawdata", appHandler.AuthMiddleware(http.HandlerFunc(appHandler.RawDataHandler)))
-
-	//TEST this is just to ensure that once nginx is in place we can properly move analysis logic over. Functions are in loginhandler.go, just change the struct there to test whatever
-	// mux.HandleFunc("GET /testapi", appHandler.TESTAPISTOCK)
-	// mux.HandleFunc("POST /itemtest", appHandler.TESTAPISTOCKhandle)
 
 	fmt.Printf("port running on localhost:8000/\n")
 	if err := http.ListenAndServe(":8000", mux); err != nil {

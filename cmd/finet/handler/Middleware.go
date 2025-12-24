@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -17,7 +18,7 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			http.Redirect(w, r, "/finet/login", http.StatusFound)
+			respondUnauthorized(w, h.SecureCookie, "authentication required")
 			return
 		}
 
@@ -25,16 +26,8 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 		session, dbErr := h.UserSessionDBService.GetSessionByID(r.Context(), sessionID)
 		if dbErr != nil {
 			log.Printf("AuthMiddleware: Session validation failed for session ID '%s': %v", sessionID, dbErr)
-			http.SetCookie(w, &http.Cookie{
-				Name:     "SessionCookie",
-				Value:    "",
-				Path:     "/finet/",
-				Expires:  time.Unix(0, 0),
-				HttpOnly: true,
-				Secure:   true,
-				SameSite: http.SameSiteLaxMode,
-			})
-			http.Redirect(w, r, "/finet/login", http.StatusFound)
+			clearSessionCookie(w, h.SecureCookie)
+			respondUnauthorized(w, h.SecureCookie, "session invalid")
 			return
 		}
 
@@ -49,25 +42,16 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 				}
 			}()
 
-			http.SetCookie(w, &http.Cookie{
-				Name:     "SessionCookie",
-				Value:    "",
-				Path:     "/finet/",
-				Expires:  time.Unix(0, 0),
-				HttpOnly: true,
-				Secure:   true,
-				SameSite: http.SameSiteLaxMode,
-			})
-			http.Redirect(w, r, "/finet/login", http.StatusFound)
+			clearSessionCookie(w, h.SecureCookie)
+			respondUnauthorized(w, h.SecureCookie, "session expired")
 			return
 		}
 
 		user, userErr := h.UserSessionDBService.GetUserByID(r.Context(), session.UserID)
 		if userErr != nil {
 			log.Printf("AuthMiddleware: Failed to get user details for user ID '%d': %v", session.UserID, userErr)
-			http.SetCookie(w, &http.Cookie{Name: "SessionCookie", Value: "", Path: "/finet/", Expires: time.Unix(0, 0), HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode})
-			http.Error(w, "Authentication error", http.StatusInternalServerError)
-			http.Redirect(w, r, "/finet/login", http.StatusFound)
+			clearSessionCookie(w, h.SecureCookie)
+			respondUnauthorized(w, h.SecureCookie, "user not found")
 			return
 		}
 
@@ -75,5 +59,23 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)
+	})
+}
+
+func respondUnauthorized(w http.ResponseWriter, secure bool, msg string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusUnauthorized)
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": msg})
+}
+
+func clearSessionCookie(w http.ResponseWriter, secure bool) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "SessionCookie",
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Unix(0, 0),
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
 	})
 }

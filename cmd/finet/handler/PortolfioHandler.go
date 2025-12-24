@@ -36,7 +36,7 @@ func (h *Handler) PortfolioHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
 
 	monthlyData, err := analysis.MakeMonthlyDataSlice(ctx, req.Tickers, h.StockDB, h.RequiredMonths,)
