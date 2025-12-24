@@ -1,6 +1,6 @@
 module github.com/AndrewBrickweg/Finet_v2/cmd/finet
 
-go 1.24.0
+go 1.23.0
 
 require (
 	github.com/AndrewBrickweg/Finet_v2/database v0.0.0-20250930190400-a106d3ee87fa
@@ -11,7 +11,7 @@ require (
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/go-sql-driver/mysql v1.9.3 // indirect
-	golang.org/x/crypto v0.42.0 // indirect
+	golang.org/x/crypto v0.21.0 // indirect
 )
 
 replace github.com/AndrewBrickweg/Finet_v2/database => ../../database
