@@ -13,7 +13,7 @@ const LoginPage = () => {
     setError("");
 
     try {
-      const response = await fetch("/finet/login", {
+      const response = await fetch("/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),

@@ -51,7 +51,7 @@ const Portfolio = () => {
   //request portfolio from db
   const getPortfolioData = async () => {
     try {
-      const res = await fetch("/finet/portfolio", {
+      const res = await fetch("/portfolio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tickers: selectedTickers }),
@@ -71,7 +71,7 @@ const Portfolio = () => {
 
   //fetch all tickers from db + load tickers on mount
   async function fetchTickers(): Promise<string[]> {
-    const res = await fetch("/finet/tickers");
+    const res = await fetch("/tickers");
 
     if (!res.ok) {
       throw new Error("Failed to fetch tickers");
@@ -148,7 +148,7 @@ const Portfolio = () => {
       <Navbar />
 
       {/* Ticker Selector */}
-      <section className="container mx-auto p-6 bg-white dark:bg-gray-800 rounded-xl shadow mb-10 mg-top-6">
+      <section className="container mx-auto p-6 bg-white dark:bg-gray-800 rounded-xl shadow mb-10 mt-4">
         <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">
           Build Portfolio
         </h3>
@@ -161,11 +161,8 @@ const Portfolio = () => {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search for company or ticker symbol"
-            className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
+            className="w-full p-2 mb-4 border rounded-lg dark:bg-gray-700 dark:text-white"
           />
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg">
-            Search for ticker
-          </button>
         </form>
         <button
           onClick={getPortfolioData}
@@ -191,22 +188,21 @@ const Portfolio = () => {
             ))}
           </ul>
         )}
+        {/* Selected Tickers */}
+        {selectedTickers.length > 0 && (
+          <ul className="mt-4 max-h-48 overflow-y-auto border-t pt-2">
+            {selectedTickers.map((ticker) => (
+              <li
+                key={ticker}
+                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
+                onClick={() => handleRemoveTicker(ticker)}
+              >
+                {ticker}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
-
-      {/* Selected Tickers */}
-      {selectedTickers.length > 0 && (
-        <ul className="mt-4 max-h-48 overflow-y-auto border-t pt-2">
-          {selectedTickers.map((ticker) => (
-            <li
-              key={ticker}
-              className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
-              onClick={() => handleRemoveTicker(ticker)}
-            >
-              {ticker}
-            </li>
-          ))}
-        </ul>
-      )}
 
       {/* portfolio results if exists */}
       <div>

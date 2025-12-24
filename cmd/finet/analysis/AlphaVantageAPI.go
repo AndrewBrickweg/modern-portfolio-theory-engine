@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 
@@ -18,7 +19,7 @@ import (
 
 // global constants
 const (
-	ApiKey                  = "ALPHAVANTAGE_API_KEY"
+	ApiKeyEnv               = "ALPHAVANTAGE_API_KEY"
 	ApiURL                  = "https://www.alphavantage.co/query?function=%v&symbol=%v&apikey=%v"
 	WeeklyAdjustedFunction  = "TIME_SERIES_WEEKLY_ADJUSTED"
 	MonthlyAdjustedFunction = "TIME_SERIES_MONTHLY_ADJUSTED"
@@ -84,11 +85,19 @@ type StockWeights struct {
 type AlphaVantageParam struct {
 	Function     string
 	Symbol       string
-	Datatype     string 
+	Datatype     string
 	APIKey       string
 	StartDate    string //for internal use, not a parameter
 	EndDate      string //for internal use, not a parameter
 	StockWeights StockWeights
+}
+
+func alphaVantageAPIKey() (string, error) {
+	key := os.Getenv(ApiKeyEnv)
+	if key == "" {
+		return "", fmt.Errorf("%s env var not set", ApiKeyEnv)
+	}
+	return key, nil
 }
 
 func RetrieveStockDataWeekly(ctx context.Context, params AlphaVantageParam) (*StockDataWeekly, error) {
@@ -128,10 +137,13 @@ func RetrieveStockDataWeekly(ctx context.Context, params AlphaVantageParam) (*St
 }
 
 func MakeWeeklyDataSlice(ctx context.Context, symbols []string) ([]*StockDataWeekly, error) {
-	paramTemplate := AlphaVantageParam{Function: WeeklyAdjustedFunction, APIKey: ApiKey}
+	apiKey, err := alphaVantageAPIKey()
+	if err != nil {
+		return nil, err
+	}
+	paramTemplate := AlphaVantageParam{Function: WeeklyAdjustedFunction, APIKey: apiKey}
 	dataSlice := make([]*StockDataWeekly, len(symbols))
 	var allErrors []error
-	var err error
 	for i, s := range symbols {
 		paramTemplate.Symbol = s
 		dataSlice[i], err = RetrieveStockDataWeekly(ctx, paramTemplate)
@@ -179,18 +191,18 @@ func RetrieveStockDataMonthly(ctx context.Context, params AlphaVantageParam) (*S
 	return &stockData, nil
 }
 
-//Using DB in prod, not making requests to API
-//need to query db and fit daily monthly close price to stockdatamonthly 
+// Using DB in prod, not making requests to API
+// need to query db and fit daily monthly close price to stockdatamonthly
 const DefaultRequiredMonths = 60
 
-func MakeMonthlyDataSlice(ctx context.Context, symbols []string, stockDB *database.StockDB, requiredMonths int)([]*StockDataMonthly, error){
+func MakeMonthlyDataSlice(ctx context.Context, symbols []string, stockDB *database.StockDB, requiredMonths int) ([]*StockDataMonthly, error) {
 
 	if requiredMonths < 2 {
 		return nil, fmt.Errorf("requiredMonths must be >= 2")
 	}
 
 	dataSlice := make([]*StockDataMonthly, 0, len(symbols))
-	
+
 	for _, symbol := range symbols {
 
 		dailyData, err := stockDB.QueryStockData(ctx, symbol)
@@ -246,8 +258,8 @@ func MakeMonthlyDataSlice(ctx context.Context, symbols []string, stockDB *databa
 	}
 
 	if len(dataSlice) == 0 {
-			return nil, fmt.Errorf("no valid monthly data produced")
-		}
+		return nil, fmt.Errorf("no valid monthly data produced")
+	}
 
 	return dataSlice, nil
 }
@@ -290,11 +302,15 @@ func truncateToMonths(md *StockDataMonthly, requiredMonths int) error {
 
 func MakeMonthlyDataSliceAPI(ctx context.Context, symbols []string) ([]*StockDataMonthly, error) {
 	const (
-		maxRetries     = 3
-		maxErrors      = 5
+		maxRetries = 3
+		maxErrors  = 5
 	)
 
-	paramTemplate := AlphaVantageParam{Function: MonthlyAdjustedFunction, APIKey: ApiKey}
+	apiKey, err := alphaVantageAPIKey()
+	if err != nil {
+		return nil, err
+	}
+	paramTemplate := AlphaVantageParam{Function: MonthlyAdjustedFunction, APIKey: apiKey}
 	dataSlice := make([]*StockDataMonthly, 0, len(symbols))
 	var allErrors []error
 
@@ -323,8 +339,8 @@ func MakeMonthlyDataSliceAPI(ctx context.Context, symbols []string) ([]*StockDat
 				err = fmt.Errorf("API error for %q: %s", s, stock.ErrorMessage)
 				break
 			}
-			
-			if(len(stock.TimeSeriesMonthly) < 2) {
+
+			if len(stock.TimeSeriesMonthly) < 2 {
 				err = fmt.Errorf("insufficient data points (%d)", len(stock.TimeSeriesMonthly))
 				continue
 			}
@@ -353,12 +369,12 @@ func MakeMonthlyDataSliceAPI(ctx context.Context, symbols []string) ([]*StockDat
 		if minLength == -1 || length < minLength {
 			minLength = length
 		}
-	}	
+	}
 
 	if minLength == -1 || minLength < 2 {
 		return dataSlice, fmt.Errorf("not enough valid data retrieved")
 	}
-	
+
 	// Truncate all to minLength
 	for i, r := range dataSlice {
 		if len(r.TimeSeriesMonthly) > minLength {
@@ -372,19 +388,19 @@ func MakeMonthlyDataSliceAPI(ctx context.Context, symbols []string) ([]*StockDat
 				Volume    string `json:"6. volume"`
 				DivAmount string `json:"7. dividend amount"`
 			}, minLength)
-			
+
 			// Extract and sort the dates to ensure chronological order
 			var dates []string
 			for date := range r.TimeSeriesMonthly {
 				dates = append(dates, date)
 			}
 			sort.Strings(dates)
-			
+
 			// Keep only the most recent minLength dates
 			for _, date := range dates[len(dates)-minLength:] {
 				newTimeSeries[date] = r.TimeSeriesMonthly[date]
 			}
-			
+
 			// Replace the old map with the new truncated map
 			dataSlice[i].TimeSeriesMonthly = newTimeSeries
 		}

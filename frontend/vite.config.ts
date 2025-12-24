@@ -5,11 +5,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      "/finet": {
-        target: "http://localhost:8000",
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/finet/, ""),
-      },
+      "/login": { target: "http://localhost:8000", changeOrigin: true },
+      "/register": { target: "http://localhost:8000", changeOrigin: true },
+      "/portfolio": { target: "http://localhost:8000", changeOrigin: true },
+      "/tickers": { target: "http://localhost:8000", changeOrigin: true },
+      "/logout": { target: "http://localhost:8000", changeOrigin: true },
     },
   },
 });
