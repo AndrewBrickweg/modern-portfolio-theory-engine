@@ -27,6 +27,8 @@ services:
   stock_data_db:
     image: mysql:8.0
     container_name: stock_data_db
+    ports:
+      - "3307:3306"
     environment:
       MYSQL_DATABASE: stock_data_db
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}

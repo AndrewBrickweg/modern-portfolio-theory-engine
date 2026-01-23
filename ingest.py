@@ -14,7 +14,7 @@ DB_CONFIG = {
     "port": int(os.getenv("DB_STOCK_DATA_PORT", 3306)),
 }
 
-DATA_DIR = "csv"
+DATA_DIR = "stock_market_data/sp500/csv"
 
 conn = mysql.connector.connect(**DB_CONFIG)
 cursor = conn.cursor()

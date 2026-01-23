@@ -5,6 +5,16 @@ CREATE USER IF NOT EXISTS 'finet_app'@'%' IDENTIFIED BY 'finet_password';
 GRANT ALL PRIVILEGES ON stock_data_db.* TO 'finet_app'@'%';
 FLUSH PRIVILEGES;
 
+CREATE TABLE IF NOT EXISTS tickers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ticker VARCHAR(10) NOT NULL UNIQUE,
+    company_name VARCHAR(255),
+    industry VARCHAR(100),
+    sub_industry VARCHAR(100),
+    UNIQUE KEY uq_tickers_ticker (ticker)
+);
+
+
 CREATE TABLE IF NOT EXISTS stock_data (
     id INT AUTO_INCREMENT PRIMARY KEY,
     ticker VARCHAR(10) NOT NULL,
@@ -17,5 +27,13 @@ CREATE TABLE IF NOT EXISTS stock_data (
     volume BIGINT,
     dividend DOUBLE,
     
-    UNIQUE (ticker, date)
+    UNIQUE KEY uq_stock_ticker_date (ticker, date),
+    INDEX idx_stock_ticker_date (ticker, date),
+
+    CONSTRAINT fk_stock_ticker
+        FOREIGN KEY (ticker)
+        REFERENCES tickers(ticker)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
 );
+
