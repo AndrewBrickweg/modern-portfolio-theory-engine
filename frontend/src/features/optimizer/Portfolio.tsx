@@ -108,6 +108,7 @@ const Portfolio = () => {
     setFilteredTickers(filtered);
   }, [query, allTickers]);
 
+  //Original search function using Alpha Vantage API
   // const handleSearchAPI = async (e: React.FormEvent) => {
   //   e.preventDefault();
 
@@ -164,12 +165,7 @@ const Portfolio = () => {
             className="w-full p-2 mb-4 border rounded-lg dark:bg-gray-700 dark:text-white"
           />
         </form>
-        <button
-          onClick={getPortfolioData}
-          className="bg-red-600 text-white px-4 py-2 rounded-lg"
-        >
-          Run Portfolio Optimizer
-        </button>
+
 
         {error && (
           <p className="text-red-500 mt-2 text-sm font-medium">{error}</p>
@@ -203,6 +199,13 @@ const Portfolio = () => {
           </ul>
         )}
       </section>
+
+              <button
+          onClick={getPortfolioData}
+          className="bg-red-600 text-white px-4 py-2 rounded-lg"
+        >
+          Run Portfolio Optimizer
+        </button>
 
       {/* portfolio results if exists */}
       <div>

@@ -25,7 +25,8 @@ const LoginPage = () => {
 
       const data = await response.json();
       console.log("Login successful:", data);
-
+      localStorage.setItem("MPT-Engine:username", JSON.stringify({username: data.username}));
+      console.log("Stored username:", localStorage.getItem("MPT-Engine:username"));
       navigate("/home");
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -37,12 +38,15 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 font-sans">
       <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg w-full max-w-md">
-        <h3 className="text-2xl font-bold text-center mb-6 text-gray-900 dark:text-gray-100">
+        <h1 className="text-2xl font-bold text-center mb-4 text-gray-900 dark:text-gray-100">
+          MPT Engine
+        </h1>
+        <p className="text-center text-sm text-gray-500 dark:text-gray-300 mb-4">
+          Portfolio Optimization Using Modern Portfolio Theory
+        </p>
+        <h3 className="text-2xl font-bold text-center mb-4 text-gray-900 dark:text-gray-100">
           Sign In
         </h3>
-        <p className="text-center text-sm text-gray-500 dark:text-gray-400 mb-8">
-          Welcome back! Please enter your credentials.
-        </p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
@@ -90,7 +94,7 @@ const LoginPage = () => {
           {error && <p className="text-red-500 text-center mt-2">{error}</p>}
         </form>
 
-        <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+        <p className="mt-6 text-center text-sm text-gray-800 dark:text-gray-400">
           Don&apos;t have an account?{" "}
           <Link
             to="/register"

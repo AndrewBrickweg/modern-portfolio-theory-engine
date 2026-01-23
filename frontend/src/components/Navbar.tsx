@@ -15,7 +15,14 @@ const Navbar = ({ username }: NavbarProps) => {
           to="/home"
           className="text-2xl font-bold text-gray-900 dark:text-gray-100"
         >
-          Finet
+          <div className="flex flex-col leading-tight">
+            <span className="text-xl font-semibold  text-gray-100">
+              MPT Engine
+            </span>
+            <span className="text-xs text-gray-400 tracking-wide uppercase">
+              Portfolio Optimization Using Modern Portfolio Theory
+            </span>
+          </div>
         </Link>
 
         <div className="flex items-center gap-4">
