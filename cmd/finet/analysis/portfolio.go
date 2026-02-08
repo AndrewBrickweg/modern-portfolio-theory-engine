@@ -1,8 +1,9 @@
 package analysis
 
 import (
-	"gonum.org/v1/gonum/stat"
 	"math"
+
+	"gonum.org/v1/gonum/stat"
 )
 
 // CovarianceMatrixSample computes sample covariance (N-1)
@@ -23,11 +24,9 @@ func CovarianceMatrixSample(returns map[string][]float64) map[string]map[string]
 				continue
 			}
 			if a == b {
-				n := float64(len(returns[a]))
-				covMatrix[a][b] = stat.Variance(returns[a], nil) * n / (n - 1)
+				covMatrix[a][b] = stat.Variance(returns[a], nil)
 			} else {
-				n := float64(len(returns[a]))
-				cov := stat.Covariance(returns[a], returns[b], nil) * n / (n - 1)
+				cov := stat.Covariance(returns[a], returns[b], nil)
 				covMatrix[a][b] = cov
 				if covMatrix[b] == nil {
 					covMatrix[b] = make(map[string]float64)
@@ -47,8 +46,7 @@ func CorrelationMatrixSample(returns map[string][]float64) map[string]map[string
 	// Precompute sample variances
 	variances := make(map[string]float64)
 	for t, r := range returns {
-		n := float64(len(r))
-		variances[t] = stat.Variance(r, nil) * n / (n - 1)
+		variances[t] = stat.Variance(r, nil)
 	}
 
 	for a, covRow := range covMatrix {

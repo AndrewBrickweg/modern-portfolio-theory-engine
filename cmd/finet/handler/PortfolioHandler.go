@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
+
 	"github.com/AndrewBrickweg/Finet_v2/cmd/finet/analysis"
 )
 
@@ -29,7 +31,7 @@ func (h *Handler) PortfolioHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
+
 	//validate tickers is not empty
 	if len(req.Tickers) == 0 {
 		http.Error(w, "No tickers provided", http.StatusBadRequest)
@@ -43,17 +45,17 @@ func (h *Handler) PortfolioHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error retrieving stock data: %v", err), http.StatusInternalServerError)
 		return
-	}	
+	}
 	fmt.Println("DEBUG: monthlyData received:", len(monthlyData))
 	fmt.Println("Successfully retrieved monthly data for tickers:", req.Tickers)
-	
+
 	//2. process tickers and run optimization
 	fmt.Println("DEBUG: About to run orchestrator...")
 	optimizedPortfolio, err := analysis.OrchestratePortfolio(
 		monthlyData,
 		10000,    // number of portfolios to simulate
-		0.04,     // risk-free rate
-		0.05,      // min weight
+		0.0033,     // risk-free rate
+		0.00,      // min weight
 		0.15,      // max weight
 	)
 	if err != nil {
@@ -80,6 +82,11 @@ func (h * Handler) GetTickersHandler (w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to fetch tickers", http.StatusInternalServerError)
 		return
 	}
+
+	log.Printf("GetTickersHandler hit: len=%d first=%#v", len(tickers), func() any {
+		if len(tickers) > 0 { return tickers[0] }
+		return nil
+	}())
 
 	w.Header().Set("Content-Type","application/json")
 	json.NewEncoder(w).Encode(tickers)

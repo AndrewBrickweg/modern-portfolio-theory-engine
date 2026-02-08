@@ -147,7 +147,7 @@ func OptimizePortfolio(returns map[string][]float64, numPortfolios int, riskFree
     expectedReturns := ExpectedReturn(returns)
     covMatrix := CovarianceMatrixSample(returns)
 
-	
+
     tickers := make([]string, 0, len(returns))
     for t := range returns {
         tickers = append(tickers, t)
@@ -158,7 +158,7 @@ func OptimizePortfolio(returns map[string][]float64, numPortfolios int, riskFree
 	}
 
 	// If basket is small, adjust maxWeight to 1/n if that is lower than the supplied maxWeight.
-	if n < 10 {
+	if n < 5 {
 		oneOverN := 1.0 / float64(n)
 		if maxWeight > oneOverN {
 			maxWeight = oneOverN

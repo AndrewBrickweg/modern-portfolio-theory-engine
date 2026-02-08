@@ -34,7 +34,7 @@ func ExtractMonthlyAdjClosePrices(data []*StockDataMonthly) map[string][]float64
 			prices = append(prices, closeVal) // Append to prices slice
 		}
 		adjClosePrices[stock.MetaData.Symbol] = prices // Store in map
-	}		
+	}
 
 	return adjClosePrices
 }

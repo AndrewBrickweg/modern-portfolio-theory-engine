@@ -18,6 +18,12 @@ type StockData struct {
 	Dividend sql.NullFloat64 `json:"dividend"`
 }
 
+type Ticker struct {
+	Ticker string `json:"ticker"`
+	CompanyName string `json:"company_name"`
+	Industry string `json:"industry"`
+}
+
 type StockDB struct {
 	DBService *DBService
 }
@@ -106,22 +112,29 @@ func MonthKey(date string) string {
 	return date[:7]
 }
 
-func(s *StockDB) GetAllTickers(ctx context.Context)([]string, error){
+//update to query tickers table to get all tickers + name + sector
+func(s *StockDB) GetAllTickers(ctx context.Context)([]Ticker, error){
 	rows, err := s.DBService.db.QueryContext(ctx, `
-		SELECT DISTINCT ticker
-		FROM stock_data
-		ORDER BY ticker ASC
+		SELECT t.ticker, t.company_name, t.industry
+		FROM tickers t
+		WHERE EXISTS (
+		SELECT 1
+		FROM stock_data sd
+		WHERE sd.ticker = t.ticker
+		)
+		ORDER BY t.ticker ASC
 	`)
+
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	tickers := make([]string, 0)
+	tickers := make([]Ticker, 0)
 
 	for rows.Next() {
-		var ticker string
-		if err := rows.Scan(&ticker); err != nil {
+		var ticker Ticker
+		if err := rows.Scan(&ticker.Ticker, &ticker.CompanyName, &ticker.Industry); err != nil {
 			return nil, err
 		}
 		tickers = append(tickers, ticker)
@@ -132,5 +145,4 @@ func(s *StockDB) GetAllTickers(ctx context.Context)([]string, error){
 	}
 
 	return tickers, nil
-
 }

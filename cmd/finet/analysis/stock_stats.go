@@ -15,7 +15,7 @@ func MonthlyStockReturns(adjClose map[string][]float64) map[string][]float64 {
 
         var monthlyReturns []float64
         for i := 1; i < len(prices); i++ {
-            ret := (prices[i] - prices[i-1]) / prices[i-1] * 100
+            ret := (prices[i] - prices[i-1]) / prices[i-1]
             monthlyReturns = append(monthlyReturns, ret)
         }
 
