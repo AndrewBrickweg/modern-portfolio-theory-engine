@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-interface CPICalculatorProps {
+interface TVMCalculatorProps {
   onChange: (data: {
     initialInvestment: number;
     monthlyContribution: number;
@@ -17,7 +17,7 @@ interface CPICalculatorProps {
   };
 }
 
-const CPICalculator = ({ onChange, defaults }: CPICalculatorProps) => {
+const TVMCalculator = ({ onChange, defaults }: TVMCalculatorProps) => {
   const [inputs, setInputs] = useState({
     initialInvestment: defaults?.initialInvestment || 0,
     monthlyContribution: defaults?.monthlyContribution || 0,
@@ -34,10 +34,10 @@ const CPICalculator = ({ onChange, defaults }: CPICalculatorProps) => {
 
   return (
     <div>
-      {/* CPI Assumptions */}
+      {/* TVM Assumptions */}
       <section className="container mx-auto p-6 bg-white dark:bg-gray-800 rounded-xl shadow mb-10">
         <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">
-          Enter your assumptions for the CPI calculation.
+          Enter your assumptions for the TVM calculation.
         </h3>
         <form className="space-y-4">
           <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -50,7 +50,7 @@ const CPICalculator = ({ onChange, defaults }: CPICalculatorProps) => {
             onChange={(e) => {
               handleChange(
                 "initialInvestment",
-                parseFloat(e.target.value) || 0
+                parseFloat(e.target.value) || 0,
               );
             }}
             className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
@@ -65,7 +65,7 @@ const CPICalculator = ({ onChange, defaults }: CPICalculatorProps) => {
             onChange={(e) => {
               handleChange(
                 "monthlyContribution",
-                parseFloat(e.target.value) || 0
+                parseFloat(e.target.value) || 0,
               );
             }}
             className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
@@ -112,4 +112,4 @@ const CPICalculator = ({ onChange, defaults }: CPICalculatorProps) => {
   );
 };
 
-export default CPICalculator;
+export default TVMCalculator;

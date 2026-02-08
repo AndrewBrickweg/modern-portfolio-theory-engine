@@ -1,52 +1,32 @@
 import { useEffect, useState } from "react";
-import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
+import Navbar from "../../components/Navbar";
+import TVMCalculator from "../simulator/TVMCalculator";
 import PortfolioChart from "./PortfolioChart";
-import CPICalculator from "../simulator/CPICalculator";
+import PortfolioPanel from "./PortfolioPanel";
+import type { PortfolioResponse, Ticker, TickerMeta } from "./optimizer.types";
 
-type BestPortfolio = {
-  Weights: Record<string, number>;
-  Return: number;
-  Risk: number;
-  Sharpe: number;
-};
-
-type PortfolioResponse = {
-  BestPortfolio: BestPortfolio;
-  Returns: Record<string, number[]>;
-};
-
-// const apiKey = import.meta.env.VITE_ALPHA_VANTAGE_API_KEY;
+//const apiKey = import.meta.env.VITE_ALPHA_VANTAGE_API_KEY;
 
 const Portfolio = () => {
-  // const [tickers, setTickers] = useState<string[]>([]);
-
-  const [allTickers, setAllTickers] = useState<string[]>([]);
+  const [allTickers, setAllTickers] = useState<Ticker[]>([]);
   const [selectedTickers, setSelectedTickers] = useState<string[]>([]);
-  const [filteredTickers, setFilteredTickers] = useState<string[]>([]);
-
+  const [filteredTickers, setFilteredTickers] = useState<Ticker[]>([]);
   // const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState<string>("");
+  const [tickerMetaBySymbol, setTickerMetaBySymbol] = useState<
+    Record<string, TickerMeta>
+  >({});
 
   const [portfolio, setPortfolio] = useState<PortfolioResponse | null>(null);
-  const [cpiData, setCpiData] = useState({
+  const [TVMData, setTVMData] = useState({
     initialInvestment: 0,
     monthlyContribution: 0,
     years: 0,
     expectedReturn: 0,
     variance: 0,
   });
-
-  //set cpi data from state
-  useEffect(() => {
-    if (!portfolio?.BestPortfolio?.Return) return;
-
-    setCpiData((prev) => ({
-      ...prev,
-      expectedReturn: Number((portfolio.BestPortfolio.Return * 12).toFixed(2)),
-    }));
-  }, [portfolio]);
 
   //request portfolio from db
   const getPortfolioData = async () => {
@@ -70,22 +50,34 @@ const Portfolio = () => {
   };
 
   //fetch all tickers from db + load tickers on mount
-  async function fetchTickers(): Promise<string[]> {
+  async function fetchTickers(): Promise<Ticker[]> {
     const res = await fetch("/tickers");
 
     if (!res.ok) {
       throw new Error("Failed to fetch tickers");
     }
-
     return res.json();
   }
 
+  //load all tickers on mount
   useEffect(() => {
     async function loadTickers() {
       try {
         const data = await fetchTickers();
+
+        const map: Record<string, TickerMeta> = {};
+
+        for (const row of data) {
+          map[row.ticker] = {
+            name: row.company_name ?? "",
+            industry: row.industry ?? undefined,
+          };
+        }
+
+        setTickerMetaBySymbol(map);
+        console.log("Tickers loaded:", data);
         setAllTickers(data);
-        setFilteredTickers(data);
+        setFilteredTickers([]);
       } catch {
         setError("Failed to load tickers");
       }
@@ -94,22 +86,59 @@ const Portfolio = () => {
     loadTickers();
   }, []);
 
+  //rank tickers based on query
+  const rankTickers = (list: Ticker[], query: string): Ticker[] => {
+    const q = query.trim().toLowerCase();
+    if (!q) return list;
+
+    const ranked = list
+      .map((t) => {
+        const ticker = t.ticker.toLowerCase();
+        const name = (t.company_name ?? "").toLowerCase();
+        const industry = (t.industry ?? "").toLowerCase();
+
+        let rank = 999;
+
+        if (ticker.startsWith(q)) rank = 0;
+        else if (name.split(/\s+/).some((word) => word.startsWith(q))) rank = 1;
+        else if (name.startsWith(q)) rank = 2;
+        else if (ticker.includes(q)) rank = 3;
+        else if (name.includes(q)) rank = 4;
+        else if (industry.includes(q)) rank = 5;
+
+        return { ticker: t, rank };
+      })
+      .filter((x) => x.rank !== 999);
+
+    ranked.sort((a, b) => a.rank - b.rank);
+
+    return ranked.map((x) => x.ticker);
+  };
+
   // refresh search
   useEffect(() => {
-    if (!query.trim()) {
-      setFilteredTickers(allTickers);
+    const q = query.trim().toLowerCase();
+    if (q.length < 1) {
+      setFilteredTickers([]);
       return;
     }
 
-    const lower = query.toLowerCase();
-
-    const filtered = allTickers.filter((t) => t.toLowerCase().includes(lower));
-
-    setFilteredTickers(filtered);
+    setFilteredTickers(rankTickers(allTickers, query));
   }, [query, allTickers]);
 
+  const handleAddTicker = (ticker: string) => {
+    if (!selectedTickers.includes(ticker)) {
+      setSelectedTickers([...selectedTickers, ticker]);
+    }
+  };
+
+  const handleRemoveTicker = (ticker: string) => {
+    setSelectedTickers(selectedTickers.filter((t) => t !== ticker));
+    setPortfolio(null);
+  };
+
   //Original search function using Alpha Vantage API
-  // const handleSearchAPI = async (e: React.FormEvent) => {
+  //const handleSearchAPI = async (e: React.FormEvent) => {
   //   e.preventDefault();
 
   //   if (!query) return;
@@ -134,16 +163,6 @@ const Portfolio = () => {
   //   }
   // };
 
-  const handleAddTicker = (ticker: string) => {
-    if (!selectedTickers.includes(ticker)) {
-      setSelectedTickers([...selectedTickers, ticker]);
-    }
-  };
-
-  const handleRemoveTicker = (ticker: string) => {
-    setSelectedTickers(selectedTickers.filter((t) => t !== ticker));
-  };
-
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 font-sans">
       <Navbar />
@@ -166,87 +185,37 @@ const Portfolio = () => {
           />
         </form>
 
-
         {error && (
           <p className="text-red-500 mt-2 text-sm font-medium">{error}</p>
         )}
 
-        {filteredTickers.length > 0 && (
-          <ul className="mt-4 max-h-48 overflow-y-auto border-t pt-2">
-            {filteredTickers.slice(0, 10).map((ticker) => (
-              <li
-                key={ticker}
-                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
-                onClick={() => handleAddTicker(ticker)}
-              >
-                {ticker}
-              </li>
-            ))}
-          </ul>
-        )}
-        {/* Selected Tickers */}
-        {selectedTickers.length > 0 && (
-          <ul className="mt-4 max-h-48 overflow-y-auto border-t pt-2">
-            {selectedTickers.map((ticker) => (
-              <li
-                key={ticker}
-                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
-                onClick={() => handleRemoveTicker(ticker)}
-              >
-                {ticker}
-              </li>
-            ))}
-          </ul>
-        )}
+        {filteredTickers.slice(0, 10).map((t) => (
+          <li
+            key={t.ticker}
+            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
+            onClick={() => handleAddTicker(t.ticker)}
+          >
+            <div className="font-medium">{t.ticker}</div>
+            <div className="text-sm opacity-70">
+              {t.company_name ?? "Unknown"}
+              {t.industry ? ` • ${t.industry}` : ""}
+            </div>
+          </li>
+        ))}
       </section>
 
-              <button
-          onClick={getPortfolioData}
-          className="bg-red-600 text-white px-4 py-2 rounded-lg"
-        >
-          Run Portfolio Optimizer
-        </button>
+      <PortfolioPanel
+        selectedTickers={selectedTickers}
+        portfolio={portfolio}
+        tickerMetaBySymbol={tickerMetaBySymbol}
+        onRun={getPortfolioData}
+        onRemoveTicker={handleRemoveTicker}
+        // isRunning={isRunning}
+      />
 
-      {/* portfolio results if exists */}
-      <div>
-        {portfolio && (
-          <section className="container mx-auto p-6 bg-white dark:bg-gray-800 rounded-xl shadow mb-10">
-            <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">
-              Optimal Portfolio Allocation
-            </h3>
+      <TVMCalculator onChange={setTVMData} defaults={TVMData} />
 
-            <div className="space-y-2 text-gray-800 dark:text-gray-200">
-              <p>
-                <strong>Historical Annual Return:</strong>{" "}
-                {(portfolio.BestPortfolio.Return * 12).toFixed(2)}%
-              </p>
-              <p>
-                <strong>Risk (Volatility):</strong>{" "}
-                {(portfolio.BestPortfolio.Risk * Math.sqrt(12)).toFixed(2)}%
-              </p>
-              <p>
-                <strong>Sharpe Ratio:</strong>{" "}
-                {portfolio.BestPortfolio.Sharpe.toFixed(2)}
-              </p>
-
-              <h4 className="font-semibold mt-4">Weights:</h4>
-              <ul className="list-disc pl-5">
-                {Object.entries(portfolio.BestPortfolio.Weights).map(
-                  ([ticker, weight]) => (
-                    <li key={ticker}>
-                      {ticker}: {(weight * 100).toFixed(1)}%
-                    </li>
-                  )
-                )}
-              </ul>
-            </div>
-          </section>
-        )}
-      </div>
-
-      <CPICalculator onChange={setCpiData} defaults={cpiData} />
-
-      <PortfolioChart cpiData={cpiData} />
+      <PortfolioChart TVMData={TVMData} />
 
       <Footer />
     </div>
