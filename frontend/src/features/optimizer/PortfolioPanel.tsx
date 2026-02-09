@@ -48,9 +48,7 @@ const PortfolioPanel = ({
   }, 0);
 
   const retPct =
-    hasPortfolio ?
-      formatPct(Math.pow(1 + portfolio!.BestPortfolio.Return, 12) - 1)
-    : "–";
+    hasPortfolio ? formatPct(portfolio!.BestPortfolio.Return * 12) : "–";
   const volPct =
     hasPortfolio ?
       formatPct(portfolio!.BestPortfolio.Risk * Math.sqrt(12))

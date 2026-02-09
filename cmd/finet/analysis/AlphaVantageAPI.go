@@ -193,7 +193,7 @@ func RetrieveStockDataMonthly(ctx context.Context, params AlphaVantageParam) (*S
 
 // Using DB in prod, not making requests to API
 // need to query db and fit daily monthly close price to stockdatamonthly
-const DefaultRequiredMonths = 60
+const DefaultRequiredMonths = 180
 
 func MakeMonthlyDataSlice(ctx context.Context, symbols []string, stockDB *database.StockDB, requiredMonths int) ([]*StockDataMonthly, error) {
 
