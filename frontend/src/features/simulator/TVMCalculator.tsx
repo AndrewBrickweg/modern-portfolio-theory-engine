@@ -17,19 +17,45 @@ interface TVMCalculatorProps {
   };
 }
 
-const TVMCalculator = ({ onChange, defaults }: TVMCalculatorProps) => {
-  const [inputs, setInputs] = useState({
-    initialInvestment: defaults?.initialInvestment || 0,
-    monthlyContribution: defaults?.monthlyContribution || 0,
-    years: defaults?.years || 0,
-    expectedReturn: defaults?.expectedReturn || 0,
-    variance: defaults?.variance || 0,
-  });
+type Inputs = {
+  initialInvestment: string;
+  monthlyContribution: string;
+  years: string;
+  expectedReturn: string;
+  variance: string;
+};
 
-  const handleChange = (field: string, value: number) => {
-    const updated = { ...inputs, [field]: value };
+const toNumber = (s: string) => {
+  const v = parseFloat(s);
+  return Number.isFinite(v) ? v : 0;
+};
+
+const TVMCalculator = ({ onChange, defaults }: TVMCalculatorProps) => {
+  const [inputs, setInputs] = useState<Inputs>(() => ({
+    initialInvestment: defaults?.initialInvestment
+      ? String(defaults.initialInvestment)
+      : "",
+    monthlyContribution: defaults?.monthlyContribution
+      ? String(defaults.monthlyContribution)
+      : "",
+    years: defaults?.years ? String(defaults.years) : "",
+    expectedReturn: defaults?.expectedReturn
+      ? String(defaults.expectedReturn)
+      : "",
+    variance: defaults?.variance ? String(defaults.variance) : "",
+  }));
+
+  const handleChange = (field: keyof Inputs, raw: string) => {
+    const updated = { ...inputs, [field]: raw };
     setInputs(updated);
-    onChange(updated);
+
+    onChange({
+      initialInvestment: toNumber(updated.initialInvestment),
+      monthlyContribution: toNumber(updated.monthlyContribution),
+      years: toNumber(updated.years),
+      expectedReturn: toNumber(updated.expectedReturn),
+      variance: toNumber(updated.variance),
+    });
   };
 
   return (
@@ -47,12 +73,7 @@ const TVMCalculator = ({ onChange, defaults }: TVMCalculatorProps) => {
             type="number"
             placeholder="Initial Investment ($)"
             value={inputs.initialInvestment}
-            onChange={(e) => {
-              handleChange(
-                "initialInvestment",
-                parseFloat(e.target.value) || 0,
-              );
-            }}
+            onChange={(e) => handleChange("initialInvestment", e.target.value)}
             className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
           />
           <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -62,12 +83,9 @@ const TVMCalculator = ({ onChange, defaults }: TVMCalculatorProps) => {
             type="number"
             placeholder="Monthly Contribution ($)"
             value={inputs.monthlyContribution}
-            onChange={(e) => {
-              handleChange(
-                "monthlyContribution",
-                parseFloat(e.target.value) || 0,
-              );
-            }}
+            onChange={(e) =>
+              handleChange("monthlyContribution", e.target.value)
+            }
             className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
           />
           <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -77,9 +95,7 @@ const TVMCalculator = ({ onChange, defaults }: TVMCalculatorProps) => {
             type="number"
             placeholder="Time Horizon (years)"
             value={inputs.years}
-            onChange={(e) => {
-              handleChange("years", parseFloat(e.target.value) || 0);
-            }}
+            onChange={(e) => handleChange("years", e.target.value)}
             className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
           />
           <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -89,9 +105,7 @@ const TVMCalculator = ({ onChange, defaults }: TVMCalculatorProps) => {
             type="number"
             placeholder="Estimated Annual Return (%)"
             value={inputs.expectedReturn}
-            onChange={(e) => {
-              handleChange("expectedReturn", parseFloat(e.target.value) || 0);
-            }}
+            onChange={(e) => handleChange("expectedReturn", e.target.value)}
             className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
           />
           <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -101,9 +115,7 @@ const TVMCalculator = ({ onChange, defaults }: TVMCalculatorProps) => {
             type="number"
             placeholder="Estimated rate variance (%)"
             value={inputs.variance}
-            onChange={(e) => {
-              handleChange("variance", parseFloat(e.target.value) || 0);
-            }}
+            onChange={(e) => handleChange("variance", e.target.value)}
             className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
           />
         </form>
