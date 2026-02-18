@@ -29,7 +29,7 @@ ON DUPLICATE KEY UPDATE adj_close = adj_close
 def parse_date(date_str):
     return datetime.strptime(date_str, "%d-%m-%Y").date()
 
-files = [f for f in os.listdir(DATA_DIR) if f.endswith(".csv")]
+files = sorted([f for f in os.listdir(DATA_DIR) if f.endswith(".csv")])
 
 print(f"Found {len(files)} CSV Files")
 
@@ -37,37 +37,52 @@ for file in files:
     ticker = file.replace(".csv","").upper()
     file_path = os.path.join(DATA_DIR, file)
 
-    with open(file_path, newline="", encoding="utf-8") as csvfile:
-        reader = csv.DictReader(csvfile)
+    print(f"processing {ticker}...")
+    rows = 0
+    file_failed = False
 
-        rows = 0
-        for row in reader:
-            try:
-                date = parse_date(row["Date"])
+    try:
+        conn.start_transaction()
+        
+        with open(file_path, newline="", encoding="utf-8") as csvfile:
+            reader = csv.DictReader(csvfile)
 
-                open_price = float(row["Open"]) if row["Open"] else None
-                high_price = float(row["High"]) if row["High"] else None
-                low_price = float(row["Low"]) if row["Low"] else None
-                close_price = float(row["Close"]) if row["Close"] else None
-                adj_close = float(row["Adjusted Close"]) if row["Adjusted Close"] else None
-                volume = int(row["Volume"]) if row["Volume"] else None
+            for row in reader:
+                try:
+                    date = parse_date(row["Date"])
 
-                if adj_close is None:
-                    continue
-                
-                cursor.execute(insert_sql,
-                (ticker,date,open_price,high_price,low_price,close_price, adj_close, volume)
-                )
+                    open_price = float(row["Open"]) if row["Open"] else None
+                    high_price = float(row["High"]) if row["High"] else None
+                    low_price = float(row["Low"]) if row["Low"] else None
+                    close_price = float(row["Close"]) if row["Close"] else None
+                    adj_close = float(row["Adjusted Close"]) if row["Adjusted Close"] else None
+                    volume = int(row["Volume"]) if row["Volume"] else None
 
-                rows += 1
+                    if adj_close is None:
+                        continue
+                    cursor.execute(insert_sql,
+                                   (ticker,date,open_price,high_price,low_price,close_price, adj_close, volume)
+                                   )
+                    rows += 1
 
-                if rows % 1000 == 0:
-                    conn.commit()
-            except Exception as e:
-                print(f"Error ingesting {ticker} {row['Date']}: {e}")
+                except Exception as e:
+                    print(f"ERROR {ticker} {row.get('Date')}: {e}")
+                    print(f"Skipping rest of {ticker} file")
+                    file_failed = True
+                    break
+
+        if file_failed:
+            conn.rollback()
+            continue
 
         conn.commit()
         print(f"Ingested {rows} rows for {ticker}")
+
+    except Exception as e:
+        print(f"FATAL error on {ticker}: {e}")
+        conn.rollback()
+        continue
+
 cursor.close()
 conn.close()
 print("complete")
