@@ -192,7 +192,7 @@ const Portfolio = () => {
         {filteredTickers.slice(0, 10).map((t) => (
           <li
             key={t.ticker}
-            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
+            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 dark:text-white cursor-pointer"
             onClick={() => handleAddTicker(t.ticker)}
           >
             <div className="font-medium">{t.ticker}</div>
